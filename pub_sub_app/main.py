@@ -16,14 +16,24 @@ def data():
     return "Welcome this is a flask app to process incomming pubsub message!"
 
 
-# function to process the messages
-def callback(message):
-    print(f"Received {message.data}.")
-    # add message processing logic here
-    message.ack()  
-    return f"Message: {message} is processed successfully"
 
+# function to process the messages (publisher)
+@app.route('/msg_send',methods=["POST"])
+def send_msg():
+    data = request.get_data().decode("utf-8")
+    publisher = pubsub_v1.PublisherClient()
+    topic_path = publisher.topic_path(config['project_id'], config['topic_name'])
+    # Data must be a bytestring
+    data = data.encode("utf-8")
+    # Add two attributes, origin and username, to the message
+    future = publisher.publish(
+        topic_path, data, origin="myapp", username="gcp"
+    )
+    print(future.result())
+    print(f"Published messages with custom attributes to {topic_path}.")
+    return ("Message Sent Successfylly", 200)
 
+# function to process the messages (consumer)
 @app.route("/msg_process", methods=["POST"])
 def index():
     envelope = request.get_json()
